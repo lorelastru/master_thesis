@@ -10,7 +10,7 @@ VHDL files used to realize the RTL design of the processor
 
 MATLAB files used to simulate and verify the RTL design behaviour
 
-## FFT_synthesis.tcl
+## FFT_syn.tcl
 
 Script used to synthesize in Design Compiler the architecture
 
