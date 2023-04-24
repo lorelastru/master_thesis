@@ -1,0 +1,160 @@
+Guida al Place and Route su Innovus
+
+--Floorplan
+
+Core utilization: 0.74 (default dato dalle librerie)
+Core to left: 10 μm
+Core to right: 10 μm
+Core to top: 10 μm
+Core to bottom: 10 μm
+
+floorPlan -site SC8T_104CPP_CMOS22FDX -r 0.99967196564 0.74 10 10 10 10
+
+--PowerPlanning
+
+•	VDD → VDD: principale pin di potenza
+•	VSS → VSS: principale pin di terra
+•	VDD → VNW_P: PMOS in NWELL
+•	VSS → VPW_N: NMOS in SXCUT
+
+checkPinAssignment
+globalNetConnect VDD -type pgpin -pin VDD -instanceBasename * -hierarchicalInstance {}
+globalNetConnect VDD -type pgpin -pin VNW_P -instanceBasename * -hierarchicalInstance {}
+globalNetConnect VSS -type pgpin -pin VSS -instanceBasename * -hierarchicalInstance {}
+globalNetConnect VSS -type pgpin -pin VPW_N -instanceBasename * -hierarchicalInstance {}
+
+
+--Optimize nanoroute
+
+setNanoRouteMode -reset
+setNanoRouteMode -drouteAutoStop false
+setNanoRouteMode -drouteNoTaperOnOutputPin true
+setNanoRouteMode -droutePostRouteSpreadWire auto
+setNanoRouteMode -routeConcurrentMinimizeViaCountEffort high
+setNanoRouteMode -routeReserveSpaceForMultiCut true
+setNanoRouteMode -routeWithSiDriven true
+setNanoRouteMode -routeWithTimingDriven true
+setNanoRouteMode -droutePostRouteSwapVia false
+setNanoRouteMode -drouteUseMultiCutviaEffort low
+setNanoRouteMode -routeWithViaInPin 1:1 
+setNanoRouteMode -routeWithViaOnlyForStandardCellPin 1:1
+setNanoRouteMode -routeUseAutoVia true
+setNanoRouteMode -routeEnforceNdrOnSpecialNetWire true
+setNanoRouteMode -drouteFixAntenna true
+setNanoRouteMode -routeWithViaInPin "1:1"
+setNanoRouteMode -routeWithViaOnlyForStandardCellPin "1:1"
+setNanoRouteMode -routeBottomRoutingLayer 2
+setNanoRouteMode -drouteOnGridOnly "via 1:1"
+setNanoRouteMode -drouteUseMultiCutViaEffort low
+setNanoRouteMode -droutePostRouteSwapVia true
+setNanoRouteMode -dbViaWeight "VIA*0_30_0_35_*V1_R 8"
+setNanoRouteMode -dbViaWeight "VIA*0_30_0_40_*V1_R 10"
+setNanoRouteMode -dbViaWeight "VIA*0_30_0_50_*V1_R 20"
+setNanoRouteMode -dbViaWeight "VIA*0_30_0_60_*V1_R 22"
+setNanoRouteMode -dbViaWeight "VIA*0_30_2_53_*AY_R 20"
+setNanoRouteMode -dbViaWeight "VIA*0_30_2_63_*AY_R 22"
+setNanoRouteMode -dbViaWeight "VIA*0_25_0_53_*A*_R 20"
+setNanoRouteMode -dbViaWeight "VIA*0_25_0_63_*A*_R 22"
+setNanoRouteMode -dbViaWeight "VIA*0_30_20_20_*X_V1 26"
+setNanoRouteMode -dbViaWeight "VIA*0_30_20_20_*X_AY 26"
+setNanoRouteMode -dbViaWeight "VIA*0_25_18_18_*X_A* 26"
+setNanoRouteMode -dbViaWeight "*BAR_V_0_30_20_20_V1 28"
+setNanoRouteMode -dbViaWeight "*BAR_H_0_30_22_22_AY_R 28"
+setNanoRouteMode -dbViaWeight "*BAR*_22_22_A*_R 28"
+setNanoRouteMode -dbViaWeight "VIA*0_30_20_20_*2CUT_V_V1 30"
+setNanoRouteMode -dbViaWeight "VIA*0_30_20_20_*2CUT_H_AY 30"
+setNanoRouteMode -dbViaWeight "VIA*0_25_18_18_*2CUT_*_A*_R 30"
+setNanoRouteMode -dbViaWeight "*2CUT_*_YS 30"
+setNanoRouteMode -dbViaWeight "*2CUT_*_WT 30"
+setNanoRouteMode -dbViaWeight "*2CUT_*_WA 30"
+setNanoRouteMode -dbViaWeight "*2CUT_*_YX 30"
+setNanoRouteMode -dbViaWeight "*2CUT_*_YR 30"
+setNanoRouteMode -dbViaWeight "*2CUT_*_XD 30"
+setNanoRouteMode -dbViaWeight "*2CUT_*_YZ 30"
+setNanoRouteMode -dbViaWeight "*2CUT_*_XA 30"
+setNanoRouteMode -dbViaWeight "*2CUT_*_JQ 30"
+
+
+
+
+OPTIMIZE VIAS
+
+setViaGenMode -align_merged_stack_via_metals true -create_double_row_cut_via 1 -cutclass_preference bar -optimize_via_on_routing_track true -Optimize_Cross_via true
+setAddStripeMode -stacked_via_bottom_layer M1
+setAddStripeMode -optimize_stripe_for_routing_track shift
+
+--RING
+JA C5 
+width 1.7
+spacing 1
+offset 1.8
+
+addRing -nets {VDD VSS} -type core_rings -follow core -layer {top JA bottom JA left C5 right C5} -width {top 1.7 bottom 1.7 left 1.7 right 1.7} -spacing {top 1 bottom 1 left 1 right 1} -offset {top 1.8 bottom 1.8 left 1.8 right 1.8} -center 0 -threshold 0 -jog_distance 0 -snap_wire_center_to_grid None
+
+--Stripe
+
+C5 vertical  offset 30
+
+addStripe -nets {VDD VSS} -layer C5 -direction vertical -width 1 -spacing 1 -set_to_set_distance 50 -start_from left -start_offset 40.040 -switch_layer_over_obs false -max_same_layer_jog_length 2 -padcore_ring_top_layer_limit LB -padcore_ring_bottom_layer_limit M1 -block_ring_top_layer_limit LB -block_ring_bottom_layer_limit M1 -use_wire_group 0 -snap_wire_center_to_grid None
+
+
+
+
+sroute -connect { blockPin padPin padRing corePin floatingStripe } -layerChangeRange { M1(1) LB(11) } -blockPinTarget { nearestTarget } -padPinPortConnect { allPort oneGeom } -padPinTarget { nearestTarget } -corePinTarget { firstAfterRowEnd } -floatingStripeTarget { blockring padring ring stripe ringpin blockpin followpin } -allowJogging 1 -crossoverViaLayerRange { M1(1) LB(11) } -nets { VDD VSS } -allowLayerChange 1 -blockPin useLef -targetViaLayerRange { M1(1) LB(11) }
+
+sroute -allowJogging 1 -allowLayerChange 1 -blockPin useLef -blockPinTarget { nearestRingStripe nearestTarget} -connect { blockPin corePin padPin} -layerChangeRange { M1(1) LB(11)} -nets { VDD VSS } -padPinPortConnect { allPort oneGeom}
+
+editPowerVia -skip_via_on_pin Standardcell -bottom_layer M1 -add_vias 1 -top_layer LB
+
+setEndCapMode -reset
+setEndCapMode -bottomEdge SC8T_COLCAPNX1_CSC20R -leftBottomCorner SC8T_CNREXTANTENNANRX11_CSC20R -leftEdge SC8T_ROWCAPANTENNARX11_CSC20R -leftTopCorner SC8T_CNREXTANTENNAPRX11_CSC20R -rightBottomCorner SC8T_CNREXTANTENNANLX11_CSC20R -rightBottomEdge SC8T_CONCAVENLX11_CSC20R -rightEdge SC8T_ROWCAPANTENNALX11_CSC20R -rightTopCorner SC8T_CNREXTANTENNAPLX11_CSC20R -rightTopEdge SC8T_CONCAVEPLX11_CSC20R -topEdge SC8T_COLCAPPX1_CSC20R -leftBottomEdge SC8T_CONCAVENRX11_CSC20R -leftTopEdge SC8T_CONCAVEPRX11_CSC20R
+addEndCap
+
+
+
+--WELL TAP
+addWellTap -cell SC8T_TAPZBX10_CSC20R -prefix WELLTAP -cellInterval 158.08 -inRowOffset 5.304 -checkerboard
+
+setDesignMode -topRoutingLayer C4
+setDesignMode -process 22 -flowEffort extreme 
+setPlaceMode -place_detail_check_cut_spacing true -placeIOPins 1
+
+saveDesign FFT_new
+
+place_opt_design
+
+eco ottimizzazione pre cts
+
+create_ccopt_clock_tree_spec -file ccopt1.spec
+get_ccopt_clock_trees
+ccopt_check_and_flatten_ilms_no_restore
+set_ccopt_property cts_is_sdc_clock_root -pin CLK true
+
+create_ccopt_clock_tree -name CLK -source CLK -no_skew_group
+set_ccopt_property source_driver -clock_tree CLK {SC8T_INVX1_CSC20R/A SC8T_INVX1_CSC20R/Z}
+set_ccopt_property clock_period -pin CLK 4000
+
+create_ccopt_skew_group -name CLK/DesignSDC -sources CLK -auto_sinks
+set_ccopt_property include_source_latency -skew_group CLK/DesignSDC true
+set_ccopt_property extracted_from_clock_name -skew_group CLK/DesignSDC CLK
+set_ccopt_property extracted_from_constraint_mode_name -skew_group CLK/DesignSDC DesignSDC
+set_ccopt_property extracted_from_delay_corners -skew_group CLK/DesignSDC Typical
+
+check_ccopt_clock_tree_convergence
+get_ccopt_property auto_design_state_for_ilms
+
+
+create_rc_corner -name corner_25 -qx_tech_file /nfsd/ichome/lib/GF/22FDX-EXT/V1.0_2.1/PEX/QRC/10M_2Mx_5Cx_1Jx_2Qx_LBthick/nominal/qrcTechFile
+update_rc_corner -name corner_25 -qx_tech_file /nfsd/ichome/lib/GF/22FDX-EXT/V1.0_2.1/PEX/QRC/10M_2Mx_5Cx_1Jx_2Qx_LBthick/nominal/qrcTechFile
+setExtractRCMode -lefTechFileMap /nfsd/ichome/lib/GF/22FDX-EXT/V1.0_2.1/PlaceRoute/Innovus/Techfiles/10M_2Mx_5Cx_1Jx_2Qx_LB/22FDSOI_10M_2Mx_5Cx_1Jx_2Qx_LB_qrc_leftech.map
+ccopt_design
+
+getFillerMode -quiet
+addFiller -cell SC8T_FILLX8_CSC20R SC8T_FILLX64_CSC20R SC8T_FILLX5_CSC20R SC8T_FILLX4_CSC20R SC8T_FILLX3_CSC20R SC8T_FILLX32_CSC20R SC8T_FILLX2_CSC20R SC8T_FILLX1_CSC20R SC8T_FILLX16_CSC20R SC8T_FILLX128_CSC20R -prefix FILLER
+setNanoRouteMode -routeAntennaCellName SC8T_ANTENNAX11_CSC20R -routeInsertAntennaDiode true
+routeDesign -trackOpt
+
+verifyConnectivity -type all -error 1000 -warning 50
+
+
+

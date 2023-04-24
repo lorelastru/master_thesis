@@ -1,0 +1,88 @@
+	nSEL <= not(SEL(2 downto 1));
+
+	IN_MUX:for i in 1 to 16 generate
+		Y(i-1) <= M1(i-1);
+		MUX_2 : entity WORK.MUX(RTL) port map (
+        	X0  => X(i*2 -2),	
+		X1  => X(i*2 -1),	
+		Y   => M1(i-1),
+		SEL => SEL(0));
+	end generate IN_MUX;
+	
+	M1(16) <= X(6);		--T_31_1,T_51_1
+	M1(17) <= X(12);	--T_52_1
+	M1(18) <= X(14);	--T_31_2,T_53_1	
+	M1(19) <= X(22);	--T_31_3,T_51_2
+	M1(20) <= X(28);	--T_52_2
+	M1(21) <= X(30);	--T_31_4,T_53_2
+	
+	MUX_Mul1 : entity WORK.MUX(RTL) port map (
+	X0  => M1(16),		--T_31_1,T_51_1
+	X1  => M1(6),		--T_165
+	Y   => M2(0),
+	SEL => SEL(2));
+	
+	MUX_Mul2 : entity WORK.MUX(RTL) port map (
+	X0  => M1(3),		--T_58_1
+	X1  => M1(10),		--T_166
+	Y   => M2(1),
+	SEL => SEL(2));
+
+	MUX_Mul3 : entity WORK.MUX_3(RTL) port map (
+	X0  => M1(18),		--T_31_2
+	X1  => M1(19),		--T_51_2
+	X2  => M1(14),		--T_167
+	Y   => M2(2),
+	SEL => SEL(2 downto 1));
+
+	MUX_Mul4 : entity WORK.MUX_3(RTL) port map (
+	X2  => M1(6),		--T_59_1
+	X1  => M1(5),		--T_85_1
+	X0  => M1(5),		--T_169
+	Y   => M2(3),
+	SEL => nSEL);
+
+	
+	MUX_Mul5 : entity WORK.MUX(RTL) port map (
+	X0  => M1(3),		--T_86_1
+	X1  => M1(9),		--T_1610
+	Y   => M2(4),
+	SEL => SEL(1)); 
+	
+
+	MUX_Mul6 : entity WORK.MUX_4(RTL) port map (
+	X0  => M1(19),		--T_31_3
+	X1  => M1(18),		--T_53_1
+	X2  => M1(7),		--T_87_1
+	X3  => M1(13),		--T_1611
+	Y   => M2(5),
+	SEL => SEL(2 downto 1));	
+	
+	MUX_Mul7 : entity WORK.MUX_3(RTL) port map (
+	X2  => M1(14),		--T_59_2
+	X1  => M1(13),		--T_85_2
+	X0  => M1(7),		--T_1613
+	Y   => M2(6),
+	SEL => nSEL);
+	
+	MUX_Mul8 : entity WORK.MUX_3(RTL) port map (
+	X2  => M1(11),		--T_58_2
+	X1  => M1(11),		--T_86_2
+	X0  => M1(11),		--T_1614
+	Y   => M2(7),
+	SEL => nSEL);
+	
+	MUX_Mul9 : entity WORK.MUX_4(RTL) port map (	
+	X0  => M1(21),		--T_31_4
+	X1  => M1(21),		--T_53_2
+	X2  => M1(15),		--T_87_2
+	X3  => M1(15),		--T_1615
+	Y   => M2(8),
+	SEL => SEL(2 downto 1));
+
+	Y(16 to 24) <= M2(0 to 8);
+	
+	Y(25) <= M1(0);
+	Y(26) <= M1(17);
+	Y(27) <= M1(8);
+	Y(28) <= M1(20);

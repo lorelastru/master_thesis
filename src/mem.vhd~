@@ -1,0 +1,47 @@
+-----------------------------------------------------
+-- Memory bank
+-- Implementation of the memory 256 bank x 16 x 28 bit
+-- Lorenzo Lastrucci
+-----------------------------------------------------
+-- Entity Name       : MEM
+-- Architecture Name : BHV
+-----------------------------------------------------
+
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use WORK.workpack.all;
+use IEEE.math_real.all;
+
+entity MEM is
+	port(   data_in  : in COMPLEX_ARRAY(0 to L-1);
+		address  : in T_ADDR(0 to L-1);
+		bank_num : in T_BANK(0 to L-1);
+		CLK, WE  : in std_logic;
+		data_out : out COMPLEX_ARRAY(0 to L-1));
+end MEM;
+	
+architecture BHV of MEM is 
+	type BANK is array(0 to 2**address(0)'length -1) of COMPLEX;
+	type T_MEM is array(0 to 2**bank_num(0)'length -1) of BANK;
+	signal MEMORY: T_MEM;
+	signal read_address  : T_ADDR(0 to L-1);
+	signal read_bank_num : T_BANK(0 to L-1);
+begin
+	process(CLK)
+	begin
+		if CLK'event and CLK = '1' then
+			for I in 0 to L-1 loop
+				if WE = '1' then	
+					MEMORY(to_integer(unsigned(bank_num(I))))(to_integer(unsigned(address(I)))) <= data_in(I);
+				end if;
+			end loop;
+			read_address <= address;
+			read_bank_num <= bank_num;
+		end if;
+	end process;
+
+	gen : for I in 0 to L-1 generate
+		data_out(I) <= MEMORY(to_integer(unsigned(read_bank_num(I))))(to_integer(unsigned(read_address(I))));
+	end generate;
+end BHV;

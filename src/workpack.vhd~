@@ -1,0 +1,118 @@
+------------------------------------------------
+-- Package containing constants, data types and 
+-- functions to be used in Processing Elements 
+-- Twiddle factor multiplier and Memory control 
+------------------------------------------------
+-- Package Name : WORKPACK
+------------------------------------------------
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use IEEE.math_real.all;
+use STD.TEXTIO.all;
+
+package WORKPACK is
+	-- data fixed point format
+	constant S : integer := 1;       -- 1: signed;  0: unsigned
+	constant P : integer := 0;       -- number of bits for integer part
+	constant F : integer := 13;      -- number of bits of fractional part and unsigned elements
+	constant N : integer := S+P+F;   -- total number of bits
+	type COMPLEX is array (0 to 1) of signed(N-1 downto 0);
+	type COMPLEX_ARRAY is array(natural range <>) of COMPLEX;
+
+	-- fft length cascading
+	constant L : integer := 16;      			-- Parallelism of the butterfly unit
+	constant T : integer := integer(ceil(log2(Real(L))));   -- Bit dimension of the indices
+	constant C : integer := 8;				-- Max length of the DFT cascade
+	type INDICES is array (natural range<>) of unsigned(T-1 downto 0);
+	type INDICES_MATRIX is array (natural range<>) of INDICES(0 to C-1);
+	type CASCADE is array (natural range<>) of unsigned(T downto 0);
+
+	-- memory address generation
+	type T_BANK is array(natural range<>) of std_logic_vector(3 downto 0);
+	type T_ADDR is array(natural range<>) of std_logic_vector(7 downto 0);
+
+	--construction of the ROM for the Rotation angle generator
+	constant D : integer := 7;      -- ROM dimension
+	constant Mbit : integer := 15;  -- number of bits for the mantissa
+	constant Ebit : integer := 4;   -- number of bits for the exponent
+	constant Abit : integer := integer(ceil(log2(Real(D)))); -- number of bits for address
+	type T_LENGTH is array (0 to D-1) of integer;
+	constant LENGTHS : T_LENGTH :=  -- FFT/DFT Lengths to be stored in the ROM 
+	(4096,256,60,12,48,240,1200,16);
+
+	type T_MANROM is array (0 to D-1) of unsigned(Mbit-1 downto 0);
+	function F_MANROM (
+	L : T_LENGTH)	-- Lengths to convert
+	return T_MANROM;
+	type T_EXPROM is array (0 to D-1) of unsigned(Ebit-1 downto 0);
+	function F_EXPROM (
+	L : T_LENGTH)	
+	return T_EXPROM;
+
+	--construction of the ROM for the PEB multiplier
+	constant MR : integer := 4;
+	constant MRbit : integer := integer(ceil(log2(Real(MR))));
+	type T_MULROM is array (0 to MR-1) of COMPLEX;
+	function F_MULROM(
+	K : integer) 
+	return T_MULROM;
+
+	-- number of steps of the pipelined radix-2 CORDIC rotator
+	constant NIT  : integer := 15;
+	constant NBIT : integer := integer(ceil(log2(real(NIT))));
+	--  constant NBIT : integer :=  4;
+  
+end WORKPACK;
+
+package body WORKPACK is
+
+	-- purpose: compute mantissa and exponent for FFT/DFT lengths ROM
+	function F_MANROM (L : T_LENGTH) return T_MANROM is
+		variable NUM, EXP, MAN : real;
+		variable MANROM : T_MANROM;
+	begin  -- F_MANROM
+		for K in 0 to D-1 loop
+			NUM := 2.0*MATH_pi/real(L(K));
+			EXP := ceil(LOG(real(NUM),2.0));
+			MAN := NUM/(2**(EXP-real(Mbit-1)));
+			MANROM(K) := to_unsigned(integer(MAN),Mbit);  	-- mantissa
+		end loop;  -- K
+		return MANROM;
+	end F_MANROM;
+
+	function F_EXPROM (L : T_LENGTH) return T_EXPROM is
+		variable NUM, EXP : real;
+		variable EXPROM : T_EXPROM;
+	begin  -- F_EXPROM
+		for K in 0 to D-1 loop
+			NUM := 2.0*MATH_pi/real(L(K));
+			EXP := ceil(LOG(real(NUM),2.0));
+			EXPROM(K) := to_unsigned(integer(-EXP),Ebit);        -- exponent  
+		end loop;  -- K
+		return EXPROM;
+	end F_EXPROM;
+
+	function F_MULROM (K : integer) return T_MULROM is
+		variable MULROM : T_MULROM;
+		variable VLINE1 : line;
+		variable VLINE2 : line;
+		variable V1 : real;
+		variable V2 : real;
+		file INP_FILE1 : text open read_mode is "./matlab/xr_rom.txt";
+		file INP_FILE2 : text open read_mode is "./matlab/xi_rom.txt";
+	begin
+		for I in 0 to 35 loop
+			readline(INP_FILE1, VLINE1);
+			read(VLINE1, V1);
+			readline(INP_FILE2, VLINE2);
+			read(VLINE2, V2);
+			if ((I-K) mod 9) = 0 then
+			      MULROM((I-K)/9)(0) := to_signed(integer(V1*2.0**(F-1)), N);
+			      MULROM((I-K)/9)(1) := to_signed(integer(V2*2.0**(F-1)), N);
+			end if;
+		end loop;
+		return MULROM;
+	end F_MULROM;
+
+end WORKPACK;

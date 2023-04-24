@@ -1,0 +1,131 @@
+------------------------------------------------
+-- Output switching
+-- Used to route elements going into the memory 
+-- Lorenzo Lastrucci
+------------------------------------------------
+-- Entity Name       : OUT_MUX
+-- Architecture Name : RTL
+------------------------------------------------
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use WORK.workpack.all;
+
+entity OUT_MUX is
+ 	port    (  X :  in COMPLEX_ARRAY(0 to 51);
+		   Y : out COMPLEX_ARRAY(0 to L-1);
+		   SEL : in std_logic_vector(3 downto 0));
+end OUT_MUX;
+
+architecture RTL of OUT_MUX is
+	constant O : COMPLEX := ((others=>'0'),(others=>'0'));
+begin
+	process(SEL,X)
+	begin
+		case SEL is
+			when "0000" => 
+				Y(0) <= X(0);
+				Y(1) <= X(1);
+				Y(2) <= X(2);
+				Y(3) <= X(3);
+				Y(4) <= X(4);
+				Y(5) <= X(5);
+				Y(6) <= X(6);
+				Y(7) <= X(7);
+				Y(8) <= X(8);
+				Y(9) <= X(9);
+				Y(10) <= X(10);
+				Y(11) <= X(11);
+				Y(12) <= X(12);
+				Y(13) <= X(13);
+				Y(14) <= X(14);
+				Y(15) <= X(15);
+			when "0001" => 
+				Y(0) <= X(0);
+				Y(1) <= X(2);
+				Y(2) <= X(1);
+				Y(3) <= X(3);
+				Y(4) <= X(4);
+				Y(5) <= X(6);
+				Y(6) <= X(5);
+				Y(7) <= X(7);
+				Y(8) <= X(8);
+				Y(9) <= X(10);
+				Y(10) <= X(9);
+				Y(11) <= X(11);
+				Y(12) <= X(12);
+				Y(13) <= X(14);
+				Y(14) <= X(13);
+				Y(15) <= X(15);
+			when "1001" => 
+				Y(0) <= X(16);
+				Y(1) <= X(22);
+				Y(2) <= X(25);
+				Y(3) <= X(17);
+				Y(4) <= X(30);
+				Y(5) <= X(33);
+				Y(6) <= X(34);
+				Y(7) <= X(40);
+				Y(8) <= X(43);
+				Y(9) <= X(35);
+				Y(10) <= X(48);
+				Y(11) <= X(51);
+				Y(12) <= O;
+				Y(13) <= O;
+				Y(14) <= O;
+				Y(15) <= O;
+			when "1011" => 
+				Y(0) <= X(16);
+				Y(1) <= X(20);
+				Y(2) <= X(27);
+				Y(3) <= X(28);
+				Y(4) <= X(19);
+				Y(5) <= X(34);
+				Y(6) <= X(38);
+				Y(7) <= X(45);
+				Y(8) <= X(46);
+				Y(9) <= X(37);
+				Y(10) <= O;
+				Y(11) <= O;
+				Y(12) <= O;
+				Y(13) <= O;
+				Y(14) <= O;
+				Y(15) <= O;
+			when "1101" => 
+				Y(0) <= X(18);
+				Y(1) <= X(22);
+				Y(2) <= X(26);
+				Y(3) <= X(30);
+				Y(4) <= X(21);
+				Y(5) <= X(25);
+				Y(6) <= X(29);
+				Y(7) <= X(33);
+				Y(8) <= X(36);
+				Y(9) <= X(40);
+				Y(10) <= X(39);
+				Y(11) <= X(43);
+				Y(12) <= X(44);
+				Y(13) <= X(48);
+				Y(14) <= X(47);
+				Y(15) <= X(51);
+			when "1111" => 
+				Y(0) <= X(19);
+				Y(1) <= X(27);
+				Y(2) <= X(37);
+				Y(3) <= X(45);
+				Y(4) <= X(23);
+				Y(5) <= X(31);
+				Y(6) <= X(41);
+				Y(7) <= X(49);
+				Y(8) <= X(20);
+				Y(9) <= X(28);
+				Y(10) <= X(38);
+				Y(11) <= X(46);
+				Y(12) <= X(24);
+				Y(13) <= X(32);
+				Y(14) <= X(42);
+				Y(15) <= X(50);
+			when others => Y <= (others => O);
+		end case;
+	end process;
+end RTL;

@@ -1,0 +1,77 @@
+-----------------------------------------------------
+-- Memory block
+-- 
+-- Lorenzo Lastrucci
+-----------------------------------------------------
+-- Entity Name       : MEMORY
+-- Architecture Name : RTL
+-----------------------------------------------------
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use WORK.workpack.all;
+use IEEE.math_real.all;
+
+
+entity MEMORY is
+	port(   data_in   : in COMPLEX_ARRAY(0 to L-1);
+		addr_load : in T_ADDR(0 to L-1);
+		bank_load : in T_BANK(0 to L-1);
+		addr_read : in T_ADDR(0 to L-1);
+		bank_read : in T_BANK(0 to L-1);
+		CTRL 	  : in std_logic;
+		CLK,WE    : in std_logic;
+		data_out  : out COMPLEX_ARRAY(0 to L-1));
+end MEMORY;
+
+architecture RTL of MEMORY is
+	signal addr_0, addr_1 : T_ADDR(0 to L-1);
+	signal bank_0, bank_1 : T_BANK(0 to L-1);
+	signal data_out_0, data_out_1 : COMPLEX_ARRAY(0 to L-1);
+	signal WE_0, WE_1 : std_logic;
+begin
+	MEM0 : entity work.MEM(BHV) 
+	port map (
+	data_in  => data_in,
+	address  => addr_0,
+	bank_num => bank_0,
+	CLK      => CLK,
+	WE  	 => WE_0,
+	data_out => data_out_0);
+	
+	MEM1 : entity work.MEM(BHV) 
+	port map (
+	data_in  => data_in,
+	address  => addr_1,
+	bank_num => bank_1,
+	CLK      => CLK,
+	WE  	 => WE_1,
+	data_out => data_out_1);
+	
+	-- Output Multiplexer
+	--data_out <= data_out_0 when READ = "10" or S(0) = '1' else data_out_1 when READ = "01" or S(0) = '0' else (others => (others => (others => 'X')));
+	data_out <= data_out_0 when S(0) = '1' else data_out_1 when S(0) = '0' else (others => (others => (others => 'X')));
+	-- Input Multiplexer
+	--addr_0 <= addr_read when READ = "10" or S(0) = '0' else addr_load when READ = "01" or S(0) = '1' else (others => (others => 'X'));
+	--bank_0 <= bank_read when READ = "10" or S(0) = '0' else bank_load when READ = "01" or S(0) = '1' else (others => (others => 'X'));
+	--addr_1 <= addr_read when READ = "01" or S(0) = '1' else addr_load when READ = "10" or S(0) = '0' else (others => (others => 'X'));
+	--bank_1 <= bank_read when READ = "01" or S(0) = '1' else bank_load when READ = "10" or S(0) = '0' else (others => (others => 'X'));
+	
+	addr_0 <= addr_read when CTRL = '1' else addr_load;
+	bank_0 <= bank_read when CTRL = '1' else bank_load;
+	addr_1 <= addr_read when CTRL = '0' else addr_load;
+	bank_1 <= bank_read when CTRL = '0' else bank_load;
+	
+	-- Write enable logic
+	WE_0 <= '1' when (CTRL = '0' and WE = '1') else '0';
+	WE_1 <= '1' when (CTRL = '1' and WE = '1') else '0';
+end RTL;
+
+
+
+
+
+
+
+
+

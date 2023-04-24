@@ -1,0 +1,194 @@
+------------------------------------------------
+-- Control Unit 
+-- Lorenzo Lastrucci
+------------------------------------------------
+-- Entity Name       : CU
+-- Architecture Name : RTL
+------------------------------------------------
+-- Probably will be merged with the  
+-- Control Unit
+------------------------------------------------
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use WORK.workpack.all;
+
+
+entity CU is 
+	port(   START,CLK,RES,
+		IT_DONE 	 : in std_logic;
+		N,P    		 : in CASCADE(0 to 7);
+		SMAX             : in unsigned(2 downto 0);
+		MODE             : in unsigned(12 downto 0);
+		EN_BU,EN_C,EN_L,
+		EN_R,RES_AG,DONE : out std_logic;
+		SEL              : out std_logic_vector(3 downto 0)
+		S_OUT            : out unsigned(2 downto 0);
+		N_OUT 		 : out CASCADE(0 to 7));
+end CU;
+	
+architecture RTL of CU is
+	constant C_BU : integer := 4;  --cycle cost of a butterfly op
+	constant C_C  : integer := 7;  --cycle cost of a cordic op
+	type STATE is (IDLE,LOAD,WORK);
+	signal S_NOW,S_NEXT : STATE;
+	signal S,S0,IT,IT_0,ITP,ITP_0 : integer := 0;
+begin	
+	process(START,S_NOW,S,IT_DONE,IT,ITP)
+		variable IT_MAX : integer := 0;
+	begin
+		S_NEXT <= IDLE;
+		RES_AG <= '1';
+		S0 <= 0;
+		IT_0 <= 0;
+		ITP_0 <= 0;
+		SEL <= (others => '0');
+		EN_BU <= '0';
+		EN_C <= '0';
+		EN_L <= '0';
+		EN_R <= '0';
+		DONE <= '0';
+		IT_MAX := 0;
+		case S_NOW is
+			when IDLE =>
+				if START = '1' then
+					S_NEXT <= LOAD;
+					EN_L <= '1';
+					RES_AG <= '0';	
+				end if;
+			when LOAD =>
+				if IT_DONE = '1' and S < to_integer(SMAX) then
+					RES_AG <= '0';
+					S_NEXT <= LOAD;
+					EN_L <= '1';
+					if ITP < P(S) then
+						ITP_0 <= ITP +1;
+						S0 <= S;
+					else
+						S0 <= S + 1;
+					end if;
+				elsif IT_DONE = '1' and S = to_integer(SMAX) then
+					S_NEXT <= WORK;
+					RES_AG <= '0';
+				else
+					S_NEXT <= LOAD;
+					EN_L <= '1';
+					S0 <= S;
+				end if;
+			when WORK =>
+				IT_MAX := to_integer(MODE)/to_integer(N(S)*P(S));
+				if S = 0 then
+					S_NEXT <= WORK;
+					EN_BU <= '1';
+					if IT < C_BU then
+						IT_0 <= IT + 1;
+						EN_R <= '1';
+					elsif IT < IT_MAX then
+						IT_0 <= IT + 1;
+						EN_R <= '1';
+						EN_L <= '1';	
+					elsif IT < IT_MAX + C_BU then
+						EN_L <= '1';
+					else
+						EN_BU <= '0';
+						S0 <= S + 1;
+						IT_0 <= 0;
+						EN_L <= '1';
+					end if;
+				elsif S > 0 and S < SMAX then
+					S_NEXT <= WORK;
+					EN_C <= '1';
+					if IT < C_C then 
+						IT_0 <= IT + 1;
+						EN_R <= '1';
+					elsif IT < C_C + C_BU then
+						EN_BU <= '1';
+						IT_0 <= IT + 1;
+						EN_R <= '1';
+					elsif IT < IT_MAX then
+						EN_BU <= '1';
+						EN_R <= '1';
+						EN_L <= '1';
+						IT_0 <= IT + 1;
+					elsif IT < IT_MAX + C_C then
+						EN_BU <= '1';
+						EN_L <= '1';
+						IT_0 <= IT + 1;
+					elsif IT < IT_MAX + C_C + C_BU then
+						EN_C <= '0';
+						EN_BU <= '1';
+						EN_L <= '1';
+						IT_0 <= IT + 1;
+					else
+						if ITP < P(S) then
+							ITP_0 <= ITP +1;
+							S0 <= S;
+						else
+							S0 <= S + 1;
+						end if;
+						IT_0 <= 0;
+					end if;
+				else 
+					S_NEXT <= IDLE;
+					DONE <= '1';
+				end if;	
+		end case;
+	end process;
+	
+	process(CLK)
+	begin
+		if CLK'event and CLK = '1' then 
+			if RES = '0' then
+				S_NOW <= IDLE;
+				S <= 0;
+				IT <= 0;
+				ITP <= 0;
+			else
+				S_NOW <= S_NEXT;
+				S <= S0;
+				IT <= IT_0;
+				ITP <= ITP_0;
+			end if;
+		end if;
+	end process;
+	
+	N_UPD : process(S)			-- N vector update 
+		variable Ntemp : CASCADE(0 to to_integer(SMAX));	
+	begin
+		for I in 0 to Ntemp'length-1 loop
+			Ntemp(I) := N((I + S) mod to_integer(SMAX));
+		end loop;
+		N_OUT(0 to to_integer(SMAX)) <= Ntemp;
+	end process;
+
+	SEL_GEN : process(S)			-- SEL generation
+		variable NS : integer := 0;	
+	begin
+		NS := to_integer(N(S));	
+		case NS is
+			when 16 => 		--radix-16
+				SEL <= "1111";
+			when 8 => 		--radix-8
+				SEL <= "1101";
+			when 5 => 		--radix-5
+				SEL <= "1011";	
+			when 4 => 		--radix-4
+				SEL <= "0001";
+			when 3 =>		--radix-3
+				SEL <= "1001";
+			when 2 =>		--radix-2 
+				SEL <= "0000";
+			when others => SEL <= "XXXX";
+		end case;
+	end process;
+	
+	S_OUT <= to_unsigned(S,S_OUT'length);
+end RTL;
+
+
+
+
+
+
+
+

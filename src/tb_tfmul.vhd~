@@ -1,0 +1,61 @@
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use WORK.WORKPACK.all;
+use IEEE.math_real.all;
+use STD.TEXTIO.all;
+entity TB_TFMUL is
+  
+end TB_TFMUL;
+
+architecture TEST of TB_TFMUL is
+  constant OUTDEL : time := 2 ns;       -- sampling dalay of outputs
+  constant TCK : time := 10 ns;         -- clock period
+  constant TMAX : time := 500 ns;      -- max simulation time 
+  constant A : unsigned(Abit-1 downto 0) := "00";  -- Address for the Lengths ROM
+  signal Y : COMPLEX;
+  signal X : COMPLEX; 
+  signal K : unsigned(F-1 downto 0) := (others => '0');  -- Input of the theta angle generator
+  signal CLK, RES : std_logic := '0';
+begin  -- TEST
+
+  -- change entity, architecture and port names according 
+  -- with your model
+  DUT: entity WORK.TFMUL(STRUCT)port map (
+      	DATA_IN  => X,
+      	K        => K,
+      	DATA_OUT => Y,
+	ADDR     => A,
+	CLK 	 => CLK,
+	RES	 => RES);  
+
+  -- CLK e RES generation
+  CLK <= not CLK after TCK/2 when now < TMAX;
+  RES <= '1' after 2 ns;
+
+  
+  -- Input generation
+  X(0) <= to_signed(4, N);
+  X(1) <= to_signed(4, N);
+  K <= to_unsigned(1,F);
+  
+  -- sampling Y and writing values on file
+  process
+    variable WLINE : line;
+    variable WR : real;
+    variable WI : real;
+    file OUT_FILE : text open write_mode is "./matlab/tfmul_data.txt";
+  begin
+   wait until CLK'event and CLK = '1';
+   if RES = '1' then
+    wait for OUTDEL;
+    WR := real(to_integer(Y(0)));
+    WI := real(to_integer(Y(1))); 
+    write(WLINE, WR);
+    write(WLINE, ' ');
+    write(WLINE, WI);
+    writeline(OUT_FILE, WLINE); 
+   end if;
+  end process; 
+
+end TEST;

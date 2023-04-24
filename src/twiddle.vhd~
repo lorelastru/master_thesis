@@ -1,0 +1,41 @@
+------------------------------------------------
+-- Twiddle factor multiplier array
+-- Lorenzo Lastrucci
+------------------------------------------------
+-- Entity Name       : TFMUL
+-- Architecture Name : STRUCT
+------------------------------------------------
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use IEEE.math_real.all;
+use WORK.WORKPACK.all;
+
+
+entity TWIDDLE is
+	port( 	N     : in CASCADE(0 to 7);
+		P     : in unsigned(4 downto 0);
+		Ki    : in INDICES_MATRIX(0 to L-1);
+		SMAX  : in unsigned(2 downto 0);
+		ADDR  : in unsigned(Abit-1 downto 0);
+		EN,CLK,RES : in std_logic;
+		data_in    : in COMPLEX_ARRAY(0 to L-1);
+		data_out   : out COMPLEX_ARRAY(0 to L-1));
+end TWIDDLE;
+
+architecture STRUCT of TWIDDLE is
+begin
+	gen_tfmul : for I in 0 to L-1 generate
+		TFMUL : entity work.TFMUL(STRUCT)
+		port map (
+		DATA_IN    => data_in(I),
+		M	   => N,
+		SMAX       => SMAX,
+	    	ADDR 	   => ADDR,
+		Ki	   => Ki(I),
+      	        DATA_OUT   => data_out(I),
+	      	CLK	   => CLK,
+		RES	   => RES,
+		EN 	   => EN);
+	end generate;
+end STRUCT;

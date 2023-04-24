@@ -1,0 +1,99 @@
+------------------------------------------------
+-- Generates the DFT cascade N=N0*N1*..NS
+-- Lorenzo Lastrucci
+------------------------------------------------
+-- Entity Name       : FFT_CAS
+-- Architecture Name : RTL
+------------------------------------------------
+
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use WORK.workpack.all;
+
+entity FFT_CAS is
+	port (  MODE : in unsigned(12 downto 0); 
+	        SMAX : out unsigned(2 downto 0);
+		   N : out CASCADE(0 to 7);
+		   P : out CASCADE(0 to 7));
+end FFT_CAS;
+
+architecture RTL of FFT_CAS is
+begin
+	FFT_CASCADING : process(MODE)
+		variable M,I : integer;  
+	begin
+		M := to_integer(MODE);
+		I := 0;
+		while M > 1 loop
+			if M mod 16 = 0 then
+				N(I) <= to_unsigned(16,N(I)'length);
+				M := M/16;
+				P(I) <= to_unsigned(1,P(I)'length);
+			elsif M mod 8 =	0 then 
+				N(I) <= to_unsigned(8,N(I)'length);
+				M := M/8;
+				if to_integer(MODE) mod 2 = 0 then
+					P(I) <= to_unsigned(2,P(I)'length);
+				else
+					P(I) <= to_unsigned(1,P(I)'length);
+				end if;
+			elsif M mod 4 =	0 then 
+				N(I) <= to_unsigned(4,N(I)'length);
+				M := M/4;
+				if to_integer(MODE) mod 4 =	0 then 
+					P(I) <= to_unsigned(4,P(I)'length);
+				elsif to_integer(MODE) mod 3 = 0 then
+					P(I) <= to_unsigned(3,P(I)'length);
+				elsif to_integer(MODE) mod 2 = 0 then
+					P(I) <= to_unsigned(2,P(I)'length);
+				else
+					P(I) <= to_unsigned(1,P(I)'length);
+				end if;
+			elsif M mod 3 =	0 then 
+				N(I) <= to_unsigned(3,N(I)'length);
+				M := M/3;
+				if to_integer(MODE) mod 4 = 0 then 
+					P(I) <= to_unsigned(4,P(I)'length);
+				elsif to_integer(MODE) mod 3 = 0 then
+					P(I) <= to_unsigned(3,P(I)'length);
+				elsif to_integer(MODE) mod 2 = 0 then
+					P(I) <= to_unsigned(2,P(I)'length);
+				else
+					P(I) <= to_unsigned(1,P(I)'length);
+				end if;
+			elsif M mod 5 =	0 then 
+				N(I) <= to_unsigned(5,N(I)'length);
+				M := M/5;
+				if to_integer(MODE) mod 2 = 0 then
+					P(I) <= to_unsigned(2,P(I)'length);
+				else
+					P(I) <= to_unsigned(1,P(I)'length);
+				end if;			
+			elsif M mod 2 = 0 then 
+				N(I) <= to_unsigned(2,N(I)'length);
+				M := M/2;
+				if to_integer(MODE) mod 8 = 0 then 
+					P(I) <= to_unsigned(8,P(I)'length);	
+				elsif to_integer(MODE) mod 7 =	0 then 
+					P(I) <= to_unsigned(7,P(I)'length);
+				elsif to_integer(MODE) mod 6 =	0 then 
+					P(I) <= to_unsigned(6,P(I)'length);
+				elsif to_integer(MODE) mod 5 =	0 then 
+					P(I) <= to_unsigned(5,P(I)'length);			
+				elsif to_integer(MODE) mod 4 =	0 then 
+					P(I) <= to_unsigned(4,P(I)'length);
+				elsif to_integer(MODE) mod 3 = 0 then
+					P(I) <= to_unsigned(3,P(I)'length);
+				elsif to_integer(MODE) mod 2 = 0 then
+					P(I) <= to_unsigned(2,P(I)'length);
+				else
+					P(I) <= to_unsigned(1,P(I)'length);
+				end if;	
+			end if;
+			I := I+1;
+		end loop;
+		SMAX <= to_unsigned(I-1,SMAX'length);
+	end process FFT_CASCADING;
+	
+end RTL;

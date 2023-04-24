@@ -1,0 +1,37 @@
+------------------------------------------------
+-- Shift-Add unit of the CORDIC processor
+-- Lorenzo Lastrucci
+------------------------------------------------
+-- Entity Name       : SHIFTADD
+-- Architecture Name : RTL
+------------------------------------------------
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use IEEE.math_real.all;
+use WORK.WORKPACK.all;
+
+entity SHIFTADD is
+	port( 	      A,B : in signed(N-1 downto 0);
+	                C : out signed(N-1 downto 0);
+	      CLK,RES,SEL : in std_logic;
+		        K : in integer);
+end SHIFTADD;
+
+architecture RTL of SHIFTADD is
+begin
+	process(SEL,A,B,K)
+	begin
+		if CLK'event and CLK = '1' then
+			if RES = '0' then
+				C <= (others => '0');
+			else
+				if SEL = '0' then
+					C <= A - shift_right(B,K);
+				else 
+					C <= A + shift_right(B,K);
+				end if;
+			end if;
+		end if;
+	end process;
+end RTL;

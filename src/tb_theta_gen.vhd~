@@ -1,0 +1,70 @@
+------------------------------------------------
+-- Theta angles Generator  -- Testbench
+-- Lorenzo Lastrucci
+------------------------------------------------
+-- Entity Name       : TB_THETA_GEN
+-- Architecture Name : TEST
+------------------------------------------------
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use WORK.WORKPACK.all;
+use IEEE.math_real.all;
+use STD.TEXTIO.all;
+entity TB_THETA_GEN is
+  
+end TB_THETA_GEN;
+
+architecture TEST of TB_THETA_GEN is
+  constant OUTDEL : time := 2 ns;       -- sampling dalay of outputs
+  constant TCK : time := 10 ns;         -- clock period
+  constant TMAX : time := 1000 ns;      -- max simulation time 
+  constant A : unsigned(Abit-1 downto 0) := "11";  -- Address for the Lengths ROM
+  signal Y : unsigned(F-1 downto 0) := (others => '0'); 
+  signal K : unsigned(F-1 downto 0) := (others => '0');  -- Input of the theta angle generator
+  signal CLK, RES : std_logic := '0';
+begin  -- TEST
+
+  -- change entity, architecture and port names according 
+  -- with your model
+  DUT: entity WORK.THETA_GEN(RTL)
+    port map (
+      K  => K,
+      T   => Y,
+      ADDR => A);  
+
+  -- CLK e RES generation
+  CLK <= not CLK after TCK/2 when now < TMAX;
+  RES <= '1' after 2 ns;
+
+-- Input generation
+  process
+  begin
+    for I in 0 to 16 loop 
+      if RES = '1' then
+        K <= to_unsigned(I,F);
+      end if;
+      wait until CLK'event and CLK = '1';
+    end loop;
+
+    wait; 
+
+  end process;
+
+-- sampling Y and writing values on file
+  process
+    variable WLINE : line;
+    variable WV : real;
+    file OUT_FILE : text open write_mode is "./matlab/theta_data.txt";
+  begin
+    wait until CLK'event and CLK = '1';
+    if RES = '1' then
+      wait for OUTDEL;
+      WV := real(to_integer(Y))*2.0**(-Mbit+1); 
+      write(WLINE, WV);
+      writeline(OUT_FILE, WLINE); 
+    end if;
+
+  end process; 
+
+end TEST;

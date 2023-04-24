@@ -1,0 +1,25 @@
+------------------------------------------------
+-- PEB multipliers ROM
+-- Lorenzo Lastrucci
+------------------------------------------------
+-- Entity Name       : mul_ROM
+-- Architecture Name : RTL
+------------------------------------------------
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use IEEE.math_real.all;
+use WORK.workpack.all;
+
+entity MULROM is
+  generic ( K : integer := 0);
+  port (
+    ADDR : in  unsigned(MRbit-1 downto 0);
+    DATA : out COMPLEX);
+end MULROM;
+
+architecture RTL of MULROM is
+  constant MULROM : T_MULROM(K) := F_MULROM;   
+begin  
+  DATA <= MULROM(to_integer(ADDR));  
+end RTL;

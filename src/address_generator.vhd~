@@ -1,0 +1,337 @@
+------------------------------------------------
+-- Address Generator
+-- Generates 16 addresses and banks number 
+-- for the memory
+-- Lorenzo Lastrucci
+------------------------------------------------
+-- Entity Name       : AG
+-- Architecture Name : STRUCT NON FUNZIONA
+------------------------------------------------
+
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use WORK.workpack.all;
+use IEEE.math_real.all;
+
+entity AG is
+	port (	N       : in CASCADE(0 to 7);
+		P       : in unsigned(4 downto 0);
+		SMAX,S  : in unsigned(2 downto 0);
+		MODE    : in unsigned(12 downto 0);
+		START,CLK,RES : in std_logic;
+		DONE,W  : out std_logic;
+		bank    : out T_BANK;
+		address : out T_ADDR;
+		Ni_out  : out INDICES_MATRIX(0 to L-1));
+end AG;
+
+architecture R_STRUCT of AG is 
+	signal NI_int : INDICES_MATRIX(0 to L-1);
+	signal Ni : INDICES(2 to C-1) := (others => (others => '0'));
+	signal N0,N1 : INDICES(0 to L-1) := (others => (others => '0'));
+	signal EN_int : std_logic_vector(1 to C-1) := (others => '0');
+	signal RES_int,W_int : std_logic := '0';
+	signal IT,IT0 : integer := 0;
+	type STATE is (IDLE,GEN);
+	signal S_NOW,S_NEXT : STATE := IDLE;
+begin
+	gen0: for I in 0 to L-1 generate
+		NI_out(I)(0) <= N0(I);
+		NI_out(I)(1) <= N1(I);
+		NI_out(I)(2 to C-1) <= NI(2 to C-1);
+	end generate;
+
+	--Ni_out <= Ni_int;
+	W <= W_int;
+	
+	--Ordering the indexes based on the stage
+	process(S,W_int,IT0,N0,N1)
+	begin
+		for I in 0 to L-1 loop
+			if SMAX > 1 then
+				NI_int(I)(to_integer(S)) <= N0(I);
+				NI_int(I)(1 + to_integer(S)) <= N1(I);
+				NI_int(I)(2 + to_integer(S) to C-1) <= NI(2 + to_integer(S) to C-1);
+				NI_int(I)(0 to to_integer(S) - 1) <= NI(2 to to_integer(S) - 1);
+			else
+				NI_int(I)(to_integer(S)) <= N0(I);
+				NI_int(I)(1 - to_integer(S)) <= N1(I);
+			end if;
+		end loop;
+	end process;
+	
+	--Bank and Address generation
+	gen1 : for I in 0 to L-1 generate
+		ADDGEN : entity WORK.ADD_GEN(RTL)
+		port map (
+		N	=> N,
+		Ni	=> NI_int(I),
+		SMAX    => SMAX,
+		bank    => bank(I),
+		address => address(I)); 
+	end generate;
+	
+	--Generation of indices from 3 to 8
+	CNT : entity WORK.CNT(RTL)
+	port map (
+	MAX   => N(2),
+	CLK   => EN_int(1),
+	RES   => RES_int,
+	COUNT => Ni(2),
+	DONE  => EN_int(2)); 
+
+	gen2 : for I in 3 to C-1 generate
+		CNT : entity WORK.CNT(RTL)
+		port map (
+		MAX   => N(I),
+		CLK   => EN_int(I-1),
+		RES   => RES_int,
+		COUNT => Ni(I),
+		DONE  => EN_int(I));  
+	end generate;
+	
+	--FSM to control the AG operations
+	process(START,S_NOW,EN_int,IT)
+		variable IT_MAX : integer := 0;
+	begin
+		S_NEXT <= IDLE;
+		EN_int(1) <= '0';
+		RES_int <= '1';
+		IT0 <= 0;
+		DONE <= '0';
+		W_int <= '0';
+		N1 <= (others => (others => '0'));
+		N0 <= (others => (others => '0'));
+		case S_NOW is
+			when IDLE =>
+				if START = '1' then
+					S_NEXT <= GEN;
+					RES_int <= '0';
+					if to_integer(P) = 1 then
+						if to_integer(SMAX) = 0 then
+							IT_MAX := 1;
+						else
+							IT_MAX := to_integer(N(1));
+						end if;
+					elsif to_integer(SMAX) > 1 then
+						IT_MAX := to_integer(MODE/(N(0)*P*N(2)));
+					else
+						IT_MAX := to_integer(MODE/(N(0)*P));
+					end if;
+				end if;
+			when GEN => 
+				--Generation of the first 2 indices				
+				for I in 0 to to_integer(P)-2 loop
+					for J in 0 to to_integer(N(0))-1 loop
+						N0(J+I*to_integer(N(0))) <= to_unsigned(J,T);
+						if to_integer(P) = 1 then
+							N1(J+I*to_integer(N(0))) <= to_unsigned(I+IT,T);
+						else
+							N1(J+I*to_integer(N(0))) <= to_unsigned(I+IT*to_integer(N(1)/P),T);
+						end if;
+					end loop;
+				end loop;
+				
+				IT0 <= IT+1;
+				RES_int <= '1';
+				W_int <= '1';
+				if IT < IT_MAX then
+					S_NEXT <= GEN;
+				else
+					if to_integer(SMAX) < 2 then
+						IT0 <= 0;
+						DONE <= '1';
+						RES_int <= '0';
+						W_int <= '0';
+						S_NEXT <= IDLE;
+						N1 <= (others => (others => '0'));
+						N0 <= (others => (others => '0'));
+					else
+						if EN_int(to_integer(SMAX)) = '1' then
+							IT0 <= 0;
+							DONE <= '1';
+							W_int <= '0';
+							RES_int <= '0';
+							S_NEXT <= IDLE;
+							N1 <= (others => (others => '0'));
+							N0 <= (others => (others => '0'));
+						else
+							EN_int(1) <= '1';
+							IT0 <= 0;
+							S_NEXT <= GEN;
+						end if;
+					end if;
+				end if;
+		end case;
+	end process;
+	
+	process(CLK)
+	begin
+		if CLK'event and CLK = '1' then 
+			if RES = '0' then
+				S_NOW <= IDLE;
+				IT <= 0;
+			else
+				S_NOW <= S_NEXT;
+				IT <= IT0;
+			end if;
+		end if;
+	end process;	
+end R_STRUCT;
+
+architecture L_STRUCT of AG is 
+	signal NI_int : INDICES_MATRIX(0 to L-1);
+	signal Ni : INDICES(2 to C-1) := (others => (others => '0'));
+	signal N0,N1 : INDICES(0 to L-1) := (others => (others => '0'));
+	signal EN_int : std_logic_vector(1 to C-1) := (others => '0');
+	signal RES_int,W_int : std_logic := '0';
+	signal IT,IT0 : integer := 0;
+	type STATE is (IDLE,GEN);
+	signal S_NOW,S_NEXT : STATE := IDLE;
+begin
+	gen0: for I in 0 to L-1 generate
+		NI_out(I)(0) <= N0(I);
+		NI_out(I)(1) <= N1(I);
+		NI_out(I)(2 to C-1) <= NI(2 to C-1);
+	end generate;
+
+	--Ni_out <= Ni_int;
+	W <= W_int;
+	
+	--Ordering the indexes based on the stage
+	process(S,W_int,IT0,N0,N1)
+	begin
+		for I in 0 to L-1 loop
+			if SMAX > 1 then
+				NI_int(I)(to_integer(S)) <= N0(I);
+				NI_int(I)(1 + to_integer(S)) <= N1(I);
+				NI_int(I)(2 + to_integer(S) to C-1) <= NI(2 + to_integer(S) to C-1);
+				NI_int(I)(0 to to_integer(S) - 1) <= NI(2 to to_integer(S) - 1);
+			else
+				NI_int(I)(to_integer(S)) <= N0(I);
+				NI_int(I)(1 - to_integer(S)) <= N1(I);
+			end if;
+		end loop;
+	end process;
+	
+	--Bank and Address generation
+	gen1 : for I in 0 to L-1 generate
+		ADDGEN : entity WORK.ADD_GEN(RTL)
+		port map (
+		N	=> N,
+		Ni	=> NI_int(I),
+		SMAX    => SMAX,
+		bank    => bank(I),
+		address => address(I)); 
+	end generate;
+	
+	--Generation of indices from 3 to 8
+	CNT : entity WORK.CNT(RTL)
+	port map (
+	MAX   => N(2),
+	CLK   => EN_int(1),
+	RES   => RES_int,
+	COUNT => Ni(2),
+	DONE  => EN_int(2)); 
+
+	gen2 : for I in 3 to C-1 generate
+		CNT : entity WORK.CNT(RTL)
+		port map (
+		MAX   => N(I),
+		CLK   => EN_int(I-1),
+		RES   => RES_int,
+		COUNT => Ni(I),
+		DONE  => EN_int(I));  
+	end generate;
+	
+	--FSM to control the AG operations
+	process(START,S_NOW,EN_int,IT)
+		variable IT_MAX : integer := 0;
+	begin
+		S_NEXT <= IDLE;
+		EN_int(1) <= '0';
+		RES_int <= '1';
+		IT0 <= 0;
+		DONE <= '0';
+		W_int <= '0';
+		N1 <= (others => (others => '0'));
+		N0 <= (others => (others => '0'));
+		case S_NOW is
+			when IDLE =>
+				if START = '1' then
+					S_NEXT <= GEN;
+					RES_int <= '0';
+					if to_integer(P) = 1 then
+						if to_integer(SMAX) = 0 then
+							IT_MAX := 1;
+						else
+							IT_MAX := to_integer(N(1));
+						end if;
+					elsif to_integer(SMAX) > 1 then
+						IT_MAX := to_integer(MODE/(N(0)*P*N(2)));
+					else
+						IT_MAX := to_integer(MODE/(N(0)*P));
+					end if;
+				end if;
+			when GEN => 
+				--Generation of the first 2 indices				
+				for I in 0 to to_integer(P)-1 loop
+					for J in 0 to to_integer(N(0))-1 loop
+						N0(J+I*to_integer(N(0))) <= to_unsigned(J,T);
+						if to_integer(P) = 1 then
+							N1(J+I*to_integer(N(0))) <= to_unsigned(I+IT,T);
+						else
+							N1(J+I*to_integer(N(0))) <= to_unsigned(I+IT*to_integer(N(1)/P),T);
+						end if;
+					end loop;
+				end loop;
+				
+				IT0 <= IT+1;
+				RES_int <= '1';
+				W_int <= '1';
+				if IT < IT_MAX then
+					S_NEXT <= GEN;
+				else
+					if to_integer(SMAX) < 2 then
+						IT0 <= 0;
+						DONE <= '1';
+						RES_int <= '0';
+						W_int <= '0';
+						S_NEXT <= IDLE;
+						N1 <= (others => (others => '0'));
+						N0 <= (others => (others => '0'));
+					else
+						if EN_int(to_integer(SMAX)) = '1' then
+							IT0 <= 0;
+							DONE <= '1';
+							W_int <= '0';
+							RES_int <= '0';
+							S_NEXT <= IDLE;
+							N1 <= (others => (others => '0'));
+							N0 <= (others => (others => '0'));
+						else
+							EN_int(1) <= '1';
+							IT0 <= 0;
+							S_NEXT <= GEN;
+						end if;
+					end if;
+				end if;
+		end case;
+	end process;
+	
+	process(CLK)
+	begin
+		if CLK'event and CLK = '1' then 
+			if RES = '0' then
+				S_NOW <= IDLE;
+				IT <= 0;
+			else
+				S_NOW <= S_NEXT;
+				IT <= IT0;
+			end if;
+		end if;
+	end process;	
+end L_STRUCT;
+
+

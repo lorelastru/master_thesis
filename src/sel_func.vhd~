@@ -1,0 +1,31 @@
+------------------------------------------------
+-- Selection function for the CORDIC rotator
+-- Lorenzo Lastrucci
+------------------------------------------------
+-- Entity Name       : SEL_FUNC
+-- Architecture Name : RTL
+------------------------------------------------
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use IEEE.math_real.all;
+use WORK.workpack.all;
+
+entity SEL_FUNC is
+	port (  W : in signed(N-1 downto 0);
+		S : out signed(N-1 downto 0));
+end SEL_FUNC;
+
+architecture RTL of SEL_FUNC is
+	signal W0 : signed(N-1 downto 0);
+begin
+	W0 <= shift_left(W,1);
+	process
+	begin
+    		if W0
+		S <= to_signed(2,S'length) when "00",
+    		A - B when "01",
+    		shift_left(A, 1) when "10",
+   		shift_right(A, 1) when "11",
+   		A when others; 
+

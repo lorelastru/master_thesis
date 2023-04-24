@@ -1,0 +1,59 @@
+------------------------------------------------
+-- Complex Multiplier
+-- Lorenzo Lastrucci
+------------------------------------------------
+-- Entity Name       : MEM_CU
+-- Architecture Name : RTL
+------------------------------------------------
+
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use WORK.WORKPACK.all;
+
+entity MUL is
+  generic( K : integer :=0 );
+  port (
+    X    : in COMPLEX;
+    SEL  : in std_logic_vector(1 downto 0);
+    Y    : out COMPLEX);
+
+end MUL;
+
+architecture RTL of MUL is
+	signal W : COMPLEX := ((others=>'0'),(others=>'0'));
+	signal ADDR : unsigned(MRbit -1 downto 0);
+begin  
+  	--MULT: process (X, ADDR)
+    	--	variable ER, ES, ED : signed(2*N downto 0);
+  	--begin 
+    	--	ER := W(0) * (resize(X(0),N+1) - resize(X(1),N+1));
+    	--	ES := (resize(W(0),N+1) + resize(W(1),N+1)) * X(0);
+	--    	ED := (resize(W(0),N+1) - resize(W(1),N+1)) * X(1);
+
+	--    	Y(0) <= resize(resize(ED,N+1) + resize(ER,N+1),N);
+	--	Y(1) <= resize(resize(ES,N+1) - resize(ER,N+1),N);
+	--end process MULT;
+
+	Y(0) <= to_signed(integer(real(to_integer(X(0)))*real(to_integer(W(0)))*2.0**(-F+1) - real(to_integer(X(1)))*real(to_integer(W(1)))*2.0**(-F+1)),Y(0)'length);
+	
+	Y(1) <= to_signed(integer(real(to_integer(X(1)))*real(to_integer(W(0)))*2.0**(-F+1) - real(to_integer(X(0)))*real(to_integer(W(1)))*2.0**(-F+1)),Y(1)'length);
+
+	ROM : entity WORK.MULROM(RTL) 
+	generic map(
+	K => K)
+	port map(
+	ADDR => ADDR,
+	DATA => W);
+
+	ADDR_GEN: process(SEL)
+	begin
+		case SEL is
+			when "00" => ADDR <= to_unsigned((0),ADDR'length);
+			when "01" => ADDR <= to_unsigned((1),ADDR'length);
+			when "10" => ADDR <= to_unsigned((2),ADDR'length);
+			when others => ADDR <= to_unsigned((3),ADDR'length);
+		end case;
+	end process ADDR_GEN;
+
+end RTL;

@@ -1,0 +1,24 @@
+------------------------------------------------
+-- Multiplexer 
+-- Lorenzo Lastrucci
+------------------------------------------------
+-- Entity Name       : CU
+-- Architecture Name : RTL
+------------------------------------------------
+
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use WORK.workpack.all;
+
+entity MUX is
+ 	port  (    SEL : in std_logic;
+		 X0,X1 : in COMPLEX;
+		     Y : out COMPLEX);
+end MUX;
+
+architecture RTL of MUX is
+begin
+	Y <= X0 when SEL = '0' else X1 when SEL = '1';
+end RTL;
+

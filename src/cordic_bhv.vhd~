@@ -1,0 +1,39 @@
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use IEEE.math_real.all;
+use WORK.WORKPACK.all;
+
+entity CORDIC is
+	generic ( L : natural := 7);	
+	port(   DATA_IN : in COMPLEX;
+		  THETA : in  signed(N-1 downto 0);
+      	       DATA_OUT : out COMPLEX;
+	       CLK, RES : in  std_logic);  
+end CORDIC;
+
+
+architecture BHV of CORDIC is
+	type T_DLINE is array (natural range <>) of signed(N-1 downto 0);
+  	signal RR, RI : T_DLINE(0 to L) := (others => (others => '0'));
+begin
+	DEL: for I in 0 to L-1 generate
+		process(CLK)
+		begin 
+			if CLK'event and CLK = '1' then 
+				if RES = '0' then
+					RR(I+1) <= (others => '0');
+					RI(I+1) <= (others => '0');
+				else
+					RR(I+1) <= RR(I);
+					RI(I+1) <= RI(I);
+				end if;
+			end if;
+		end process;
+	end generate DEL;
+
+	RR(0) <= to_signed(integer(real(to_integer(DATA_IN(0)))*cos(real(to_integer(THETA))*2.0**(-Mbit+1)) - real(to_integer(DATA_IN(0)))*sin(real(to_integer(THETA))*2.0**(-Mbit+1))),RR(0)'length);
+	RI(0) <= to_signed(integer(real(to_integer(DATA_IN(1)))*sin(real(to_integer(THETA))*2.0**(-Mbit+1)) - real(to_integer(DATA_IN(1)))*cos(real(to_integer(THETA))*2.0**(-Mbit+1))),RR(0)'length);
+	DATA_OUT(0) <= RR(L);
+	DATA_OUT(1) <= RI(L);
+end BHV;

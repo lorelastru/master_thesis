@@ -1,0 +1,43 @@
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use WORK.workpack.all;
+
+entity DELAY is
+	port(   X    :  in COMPLEX_ARRAY(0 to 15);
+		Y    : out COMPLEX_ARRAY(0 to 15);
+    		CLK  : in  std_logic;
+		EN   : in std_logic;
+    		RES  : in  std_logic);
+end DELAY;
+
+architecture RTL of DELAY is
+  	signal R0 : COMPLEX_ARRAY(0 to 15) := (others =>((others=>'0'),(others=>'0')));
+	signal R1 : COMPLEX_ARRAY(0 to 15) := (others =>((others=>'0'),(others=>'0')));
+	signal R2 : COMPLEX_ARRAY(0 to 15) := (others =>((others=>'0'),(others=>'0')));
+begin
+	process(CLK)
+	begin 
+		if CLK'event and CLK = '1' then 
+			if RES = '0' then
+				R1 <= (others =>((others=>'0'),(others=>'0')));
+			elsif EN = '1' then
+				R1 <= X;
+			end if;
+		end if;
+	end process;
+
+	process(CLK)
+	begin 
+		if CLK'event and CLK = '1' then 
+			if RES = '0' then
+				Y <= (others =>((others=>'0'),(others=>'0')));
+			else
+				if EN = '1' then
+					Y <= R1;
+				end if;
+			end if;
+		end if;
+	end process;
+
+end RTL;

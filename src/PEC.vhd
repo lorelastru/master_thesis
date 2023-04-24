@@ -1,0 +1,121 @@
+------------------------------------------------
+-- Processing Element C
+-- Lorenzo Lastrucci
+------------------------------------------------
+-- Entity Name       : PEC
+-- Architecture Name : STRUCT
+------------------------------------------------
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use WORK.workpack.all;
+
+entity PEC is
+ 	port    (  X :  in COMPLEX_ARRAY(0 to 9);
+		   Y : out COMPLEX_ARRAY(0 to 17);
+		   SEL :  in std_logic_vector(1 downto 0));
+end PEC;
+
+architecture STRUCT of PEC is
+	signal T : COMPLEX_ARRAY(0 to 13) := (others =>((others=>'0'),(others=>'0')));
+	signal M : COMPLEX_ARRAY(0 to 1) := (others =>((others=>'0'),(others=>'0')));
+	signal SEL1 : std_logic;
+	signal X_2,X_5 : COMPLEX := ((others=>'0'),(others=>'0'));
+begin
+	--X_2(0) <= shift_right(X(2)(0),1) when SEL = "01" else X(2)(0); --
+	--X_2(1) <= shift_right(X(2)(1),1) when SEL = "01" else X(2)(1);	--used to scale the representation correctly when radix-5
+	
+	--X_5(0) <= shift_right(X(5)(0),1) when SEL = "01" else X(5)(0); --
+	--X_5(1) <= shift_right(X(5)(1),1) when SEL = "01" else X(5)(1);	--used to scale the representation correctly when radix-5
+	
+	--Input radix-2 butterfly units	
+	R2_1 : entity WORK.RX_2(RTL) port map (	  
+        A => X(2),	--x20_1, x40_1, T55
+        B => X(3),	--x21_1, x42_1, M50
+        X => T(0),	--S40_1, X20_1
+        Y => T(1));	--S50, X21_1
+	
+	R2_2 : entity WORK.RX_2(RTL) port map (
+        A => X(4),	--x20_2, T33_1, x41_1, M50
+        B => X(5),	--x21_2, M31_1, x43_1, T_56
+        X => T(2),	--S42_1, S51, X31_1, X20_2
+        Y => T(3));	--X32_1, X21_2
+	
+	R2_3 : entity WORK.RX_2(RTL) port map (
+        A => X(6),	--x20_3, x40_2, M53
+        B => X(7),	--x21_3, x42_2, M52
+        X => T(4),	--S52, S40_2, X20_3
+        Y => T(5));	--S41_2, X21_3
+
+	R2_4 : entity WORK.RX_2(RTL) port map (
+        A => X(8),	--x20_4, T33_2, x41_2, M52
+        B => X(9),	--x21_4, M31_2, x43_2, M51
+        X => T(6),	--S42_2, S53, X20_4, X31_2
+        Y => T(7));	--X21_4, X32_2
+
+	--Internal MUXs
+	SEL1 <= '0' when SEL = "11" else '1';
+	
+	MUX_1 : entity WORK.MUX(RTL) port map (
+        X0 => T(0),	--S40_1
+        X1 => T(1),	--S50 
+        Y => T(8),
+	SEL => SEL1);
+
+	MUX_2 : entity WORK.MUX(RTL) port map (
+        X0 => T(2),	--S42_1
+        X1 => T(4),	--S52
+        Y => T(9),
+	SEL => SEL1);
+	
+	MUX_3 : entity WORK.MUX(RTL) port map (
+        X0 => T(4),	--S40_2
+        X1 => T(2),	--S51
+        Y => T(10),
+	SEL => SEL1);
+
+	--Trivial Multipliers
+	M(0)(0) <= T(3)(1);	--S43_1
+	M(0)(1) <= -T(3)(0);
+
+	M(1)(0) <= T(7)(1);	--S43_2
+	M(1)(1) <= -T(7)(0);
+	
+	--Output radix-2 butterfly units
+	Y(0)(0) <= shift_right(X(0)(0),1) when (SEL = "00" or SEL = "01") else X(0)(0);	--
+	Y(0)(1) <= shift_right(X(0)(1),1) when (SEL = "00" or SEL = "01") else X(0)(1);	--X30_1, X50
+
+	Y(1) <= X(1);	--X30_2
+	Y(2) <= T(0);	--X20_1
+	Y(5) <= T(1); 	--X21_1
+	Y(6) <= T(2);	--X20_2, X31_1
+	Y(9) <= T(3);	--X21_2, X32_2
+	Y(10) <= T(4);	--X20_3
+	Y(13) <= T(5);	--X21_3
+	Y(14) <= T(6);	--X20_4, X31_2
+	Y(17) <= T(7);	--X21_4, X32_2
+
+	R2_5 : entity WORK.RX_2(RTL) port map (	  
+        A => T(8),	
+        B => T(9),	
+        X => Y(3),	--X40_1, X54
+        Y => Y(4));	--X42_1, X51	
+	
+	R2_6 : entity WORK.RX_2(RTL) port map (
+        A => T(1),	--S41_1
+        B => M(0),	--S43_1	
+        X => Y(7),	--X41_1
+        Y => Y(8));	--X43_1 T58
+	
+	R2_7 : entity WORK.RX_2(RTL) port map (	  
+        A => T(10),	
+        B => T(6),	--S42_2, S53
+        X => Y(11),	--X40_2, X52
+        Y => Y(12));	--X42_2, X53
+
+	R2_8 : entity WORK.RX_2(RTL) port map (
+        A => T(5),	--S41_2
+        B => M(1),	--S43_2
+        X => Y(15),	--X41_2
+        Y => Y(16));	--X43_2
+end STRUCT;

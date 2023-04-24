@@ -1,0 +1,75 @@
+------------------------------------------------
+-- Address Generator  -- Testbench
+-- Lorenzo Lastrucci
+------------------------------------------------
+-- Entity Name       : TB_MEM_CU
+-- Architecture Name : TEST
+------------------------------------------------
+library IEEE;
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+use WORK.WORKPACK.all;
+use IEEE.math_real.all;
+use STD.TEXTIO.all;
+
+entity TB_AG is
+  
+end TB_AG;
+
+architecture TEST of TB_AG is
+  constant OUTDEL : time := 2 ns;       -- sampling dalay of outputs
+  constant TCK : time := 10 ns;         -- clock period
+  constant TMAX : time := 100000 ns;      -- max simulation time 
+
+  signal MODE : unsigned(12 downto 0) := to_unsigned(4096,13);
+  signal SMAX : unsigned(2 downto 0) := (others => '0');
+  signal N,P_cas : CASCADE(0 to 7) := (others =>(others=>'1'));	-- Input of the memory controller
+  signal P : integer := 0;
+  signal bank  : T_BANK(0 to L-1);
+  signal address : T_ADDR(0 to L-1);
+  signal CLK, RES, EN_L, DONE : std_logic := '0';
+  signal Ni : INDICES_MATRIX(0 to L-1);
+begin  -- TEST
+
+  -- change entity, architecture and port names according 
+  -- with your model
+  FFT_CASCADE: entity WORK.FFT_CAS(RTL)
+  port map (
+	P     => P_cas,
+	SMAX  => SMAX,
+	N     => N,
+	MODE  => MODE);  
+
+  DUT: entity WORK.AG(STRUCT_2)
+  port map (
+	MODE  => MODE,
+	P     => P_cas(0),
+	bank  => bank,
+	address => address,
+	N     => N,
+	Ni_out => Ni,
+	SMAX  => SMAX,
+	RES   => RES,
+	EN => EN_L,
+      	CLK   => CLK,
+	DONE  => DONE);  
+
+  -- CLK e RES generation
+  CLK <= not CLK after TCK/2 when now < TMAX;
+  RES <= '1' after 2 ns;
+  EN_L <= '1' after 20 ns;
+
+  -- Loop control
+  process(DONE)
+	variable Ptemp : integer := 0;  
+  begin
+    Ptemp := P;
+    if Ptemp < to_integer(P_cas(0))-1 then
+      if DONE = '1' then
+	Ptemp := Ptemp + 1;
+      end if;
+    end if;
+    P <= Ptemp;
+  end process;
+end TEST;
+
